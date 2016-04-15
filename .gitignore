@@ -136,8 +136,9 @@
 /windows/*.hlp
 /windows/.bmake
 /windows/*.suo
-Debug
 *.log
 *.opendb
 *.db
+Debug
+Release
 .vs
