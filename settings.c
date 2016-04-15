@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "putty.h"
 #include "storage.h"
+#include "urlhack.h"
 
 /* The cipher order given here is the default order. */
 static const struct keyvalwhere ciphernames[] = {
@@ -652,6 +653,14 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_i(sesskey, "ConnectionSharingUpstream", conf_get_int(conf, CONF_ssh_connection_sharing_upstream));
     write_setting_i(sesskey, "ConnectionSharingDownstream", conf_get_int(conf, CONF_ssh_connection_sharing_downstream));
     wmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys, FALSE);
+
+    /* PuTTY-url */
+    write_setting_i(sesskey, "HyperlinkUnderline", conf_get_int(conf, CONF_url_underline));
+    write_setting_i(sesskey, "HyperlinkUseCtrlClick", conf_get_int(conf, CONF_url_ctrl_click));
+    write_setting_i(sesskey, "HyperlinkBrowserUseDefault", conf_get_int(conf, CONF_url_defbrowser));
+    write_setting_filename(sesskey, "HyperlinkBrowser", conf_get_filename(conf, CONF_url_browser));
+    write_setting_i(sesskey, "HyperlinkRegularExpressionUseDefault", conf_get_int(conf, CONF_url_defregex));
+    write_setting_s(sesskey, "HyperlinkRegularExpression", conf_get_str(conf, CONF_url_regex));
 }
 
 void load_settings(char *section, Conf *conf)
@@ -670,6 +679,14 @@ void load_open_settings(void *sesskey, Conf *conf)
 {
     int i;
     char *prot;
+
+    /*
+     * HACK: PuTTY-url
+     * Set font quality to cleartype on Windows Vista and above
+     */
+    OSVERSIONINFO versioninfo;
+    versioninfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    GetVersionEx(&versioninfo);
 
     conf_set_int(conf, CONF_ssh_subsys, 0);   /* FIXME: load this properly */
     conf_set_str(conf, CONF_remote_cmd, "");
@@ -865,7 +882,7 @@ void load_open_settings(void *sesskey, Conf *conf)
 		 / 1000
 #endif
 		 );
-    gppi(sesskey, "ScrollbackLines", 2000, conf, CONF_savelines);
+    gppi(sesskey, "ScrollbackLines", 10000, conf, CONF_savelines); // HACK: PuTTY-url
     gppi(sesskey, "DECOriginMode", 0, conf, CONF_dec_om);
     gppi(sesskey, "AutoWrapMode", 1, conf, CONF_wrap_mode);
     gppi(sesskey, "LFImpliesCR", 0, conf, CONF_lfhascr);
@@ -877,7 +894,17 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "TermWidth", 80, conf, CONF_width);
     gppi(sesskey, "TermHeight", 24, conf, CONF_height);
     gppfont(sesskey, "Font", conf, CONF_font);
-    gppi(sesskey, "FontQuality", FQ_DEFAULT, conf, CONF_font_quality);
+
+    /*
+     * HACK: PuTTY-url
+     * Set font quality to cleartype on Windows Vista and higher
+     */
+    if (versioninfo.dwMajorVersion >= 6) {
+        gppi(sesskey, "FontQuality", FQ_CLEARTYPE, conf, CONF_font_quality);
+    } else {
+        gppi(sesskey, "FontQuality", FQ_DEFAULT, conf, CONF_font_quality);
+    }
+
     gppi(sesskey, "FontVTMode", VT_UNICODE, conf, CONF_vtmode);
     gppi(sesskey, "UseSystemColours", 0, conf, CONF_system_colour);
     gppi(sesskey, "TryPalette", 0, conf, CONF_try_palette);
@@ -1001,6 +1028,14 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppi(sesskey, "ConnectionSharingUpstream", 1, conf, CONF_ssh_connection_sharing_upstream);
     gppi(sesskey, "ConnectionSharingDownstream", 1, conf, CONF_ssh_connection_sharing_downstream);
     gppmap(sesskey, "SSHManualHostKeys", conf, CONF_ssh_manual_hostkeys);
+
+    /* PuTTY-url */
+    gppi(sesskey, "HyperlinkUnderline", 1, conf, CONF_url_underline);
+    gppi(sesskey, "HyperlinkUseCtrlClick", 0, conf, CONF_url_ctrl_click);
+    gppi(sesskey, "HyperlinkBrowserUseDefault", 1, conf, CONF_url_defbrowser);
+    gppfile(sesskey, "HyperlinkBrowser", conf, CONF_url_browser);
+    gppi(sesskey, "HyperlinkRegularExpressionUseDefault", 1, conf, CONF_url_defregex);
+    gpps(sesskey, "HyperlinkRegularExpression", urlhack_default_regex, conf, CONF_url_regex);
 }
 
 void do_defaults(char *session, Conf *conf)
