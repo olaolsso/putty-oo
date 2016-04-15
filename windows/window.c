@@ -718,9 +718,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 	if (conf_get_int(conf, CONF_sunken_edge))
 	    exwinmode |= WS_EX_CLIENTEDGE;
 	hwnd = CreateWindowExW(exwinmode, uappname, uappname,
-                               winmode, CW_USEDEFAULT, CW_USEDEFAULT,
-                               guess_width, guess_height,
-                               NULL, NULL, inst, NULL);
+        winmode, conf_get_int(conf, CONF_window_left), conf_get_int(conf, CONF_window_top),
+        guess_width, guess_height,
+        NULL, NULL, inst, NULL);
         sfree(uappname);
     }
 
@@ -3028,12 +3028,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                          * snap UI.
                          */
                         need_backend_resize = TRUE;
-                        conf_set_int(conf, CONF_height, h);
-                        conf_set_int(conf, CONF_width, w);
                     } else {
                         term_size(term, h, w,
                                   conf_get_int(conf, CONF_savelines));
                     }
+                    conf_set_int(conf, CONF_height, h);
+                    conf_set_int(conf, CONF_width, w);
                 }
                 reset_window(0);
             } else if (wParam == SIZE_RESTORED && was_zoomed) {
@@ -3067,11 +3067,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
                      * opaque drag.)
                      */
 		    need_backend_resize = TRUE;
-		    conf_set_int(conf, CONF_height, h);
-		    conf_set_int(conf, CONF_width, w);
                 } else {
                     term_size(term, h, w, conf_get_int(conf, CONF_savelines));
                 }
+		        conf_set_int(conf, CONF_height, h);
+		        conf_set_int(conf, CONF_width, w);
             } else {
                 reset_window(0);
 	    }
@@ -4260,30 +4260,6 @@ static int TranslateKey(UINT message, WPARAM wParam, LPARAM lParam,
 	    *p++ = '\033';
 
 	/* Lets see if it's a pattern we know all about ... */
-	if (wParam == VK_PRIOR && shift_state == 1) {
-	    SendMessage(hwnd, WM_VSCROLL, SB_PAGEUP, 0);
-	    return 0;
-	}
-	if (wParam == VK_PRIOR && shift_state == 2) {
-	    SendMessage(hwnd, WM_VSCROLL, SB_LINEUP, 0);
-	    return 0;
-	}
-	if (wParam == VK_NEXT && shift_state == 1) {
-	    SendMessage(hwnd, WM_VSCROLL, SB_PAGEDOWN, 0);
-	    return 0;
-	}
-	if (wParam == VK_NEXT && shift_state == 2) {
-	    SendMessage(hwnd, WM_VSCROLL, SB_LINEDOWN, 0);
-	    return 0;
-	}
-	if ((wParam == VK_PRIOR || wParam == VK_NEXT) && shift_state == 3) {
-	    term_scroll_to_selection(term, (wParam == VK_PRIOR ? 0 : 1));
-	    return 0;
-	}
-	if (wParam == VK_INSERT && shift_state == 1) {
-	    request_paste(NULL);
-	    return 0;
-	}
 	if (left_alt && wParam == VK_F4 && conf_get_int(conf, CONF_alt_f4)) {
 	    return -1;
 	}
@@ -4566,7 +4542,7 @@ static int TranslateKey(UINT message, WPARAM wParam, LPARAM lParam,
 	    code = 34;
 	    break;
 	}
-	if ((shift_state&2) == 0) switch (wParam) {
+	switch (wParam) {
 	  case VK_HOME:
 	    code = 1;
 	    break;
@@ -4658,8 +4634,15 @@ static int TranslateKey(UINT message, WPARAM wParam, LPARAM lParam,
 	    return p - output;
 	}
 	if (code) {
-	    p += sprintf((char *) p, "\x1B[%d~", code);
-	    return p - output;
+	        // https://code.google.com/p/mintty/wiki/Keycodes#Modifier_key_encodings
+	        int modifier = 1 + (shift_state & 1) + 2*(shift_state & 2);
+	        if (code == 1)
+	            p += sprintf((char *)p, "\x1b[1;%dH", modifier);
+	        else if (code == 4)
+	            p += sprintf((char *)p, "\x1b[1;%dF", modifier);
+	        else
+	            p += sprintf((char *)p, "\x1b[%d;%d~", code, modifier);
+	        return p - output;
 	}
 
 	/*

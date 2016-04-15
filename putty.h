@@ -892,7 +892,9 @@ void cleanup_exit(int);
     X(INT, NONE, url_defbrowser) \
     X(INT, NONE, url_defregex) \
     X(FILENAME, NONE, url_browser) \
-    X(STR, NONE, url_regex)
+    X(STR, NONE, url_regex) \
+    X(INT, NONE, window_left) \
+    X(INT, NONE, window_top)
 
 /* Now define the actual enum of option keywords using that macro. */
 #define CONF_ENUM_DEF(valtype, keytype, keyword) CONF_ ## keyword,

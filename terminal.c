@@ -6392,6 +6392,13 @@ int format_arrow_key(char *buf, Terminal *term, int xkey, int ctrl)
 	if (!term->app_keypad_keys)
 	    app_flg = 0;
 #endif
+	if (ctrl) {
+	    // https://code.google.com/p/mintty/wiki/Keycodes#Modifier_key_encodings
+	    int modifier = 1 + (ctrl & 1) + 2*(ctrl & 2);
+	    p += sprintf((char *)p, "\x1b[1;%d%c", modifier, xkey);
+	    return p - buf;
+	}
+
 	/* Useful mapping of Ctrl-arrows */
 	if (ctrl)
 	    app_flg = !app_flg;

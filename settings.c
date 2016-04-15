@@ -661,6 +661,12 @@ void save_open_settings(void *sesskey, Conf *conf)
     write_setting_filename(sesskey, "HyperlinkBrowser", conf_get_filename(conf, CONF_url_browser));
     write_setting_i(sesskey, "HyperlinkRegularExpressionUseDefault", conf_get_int(conf, CONF_url_defregex));
     write_setting_s(sesskey, "HyperlinkRegularExpression", conf_get_str(conf, CONF_url_regex));
+
+    RECT rect;
+    if (hwnd && GetWindowRect(hwnd, &rect)) {
+        write_setting_i(sesskey, "WindowLeft", rect.left);
+        write_setting_i(sesskey, "WindowTop", rect.top);
+    }
 }
 
 void load_settings(char *section, Conf *conf)
@@ -1036,6 +1042,9 @@ void load_open_settings(void *sesskey, Conf *conf)
     gppfile(sesskey, "HyperlinkBrowser", conf, CONF_url_browser);
     gppi(sesskey, "HyperlinkRegularExpressionUseDefault", 1, conf, CONF_url_defregex);
     gpps(sesskey, "HyperlinkRegularExpression", urlhack_default_regex, conf, CONF_url_regex);
+
+    gppi(sesskey, "WindowLeft", CW_USEDEFAULT, conf, CONF_window_left);
+    gppi(sesskey, "WindowTop", CW_USEDEFAULT, conf, CONF_window_top);
 }
 
 void do_defaults(char *session, Conf *conf)
